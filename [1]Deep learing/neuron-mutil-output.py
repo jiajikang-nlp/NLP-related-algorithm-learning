@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[18]:
+# In[1]:
 
 import tensorflow as tf # 导入tensorflow模型
 import os
@@ -12,17 +12,27 @@ CIFAR_DIR = "./cifar-10-batches-py"
 print('路径文件：',os.listdir(CIFAR_DIR))
 
 
-# In[85]:
+# In[5]:
 
 
 # 为何使函数具有泛化能力
-import tensorflow as tf # 导入tensorflow模型
-import os
-import _pickle as cPickle
-import numpy as np
+#import tensorflow as tf # 导入tensorflow模型
+#import os
+#import _pickle as cPickle
+#import numpy as np
  
-CIFAR_DIR = "./cifar-10-batches-py"
-print('路径文件：',os.listdir(CIFAR_DIR))
+#CIFAR_DIR = "./cifar-10-batches-py"
+#print('路径文件：',os.listdir(CIFAR_DIR))
+"""
+# 0,1类别
+            #for item,label in zip(data,labels):# 将两个数据绑在一起
+            #    if label in [0,1]: # 如果在0-1之间的话 50000个样本，但是有10个类别，只挑了2个
+            #        all_data.append(item)
+            #        all_labels.append(label)
+
+
+
+"""
 
 
 def load_data(filename):
@@ -37,22 +47,21 @@ class CifarData:
         all_data = []
         all_labels = []
         for filename in filenames:
-            data,labels = load_data(filename)
-            #all_data.append(data)
-            #all_labels.append(labels)
+            data,labels = load_data(filename) # """为了实现多分类的逻辑斯蒂回归，现在已经是10个类的数据"""
+            all_data.append(data)
+            all_labels.append(labels)
             # 0,1类别
-            for item,label in zip(data,labels):# 将两个数据绑在一起
-                if label in [0,1]: # 如果在0-1之间的话 50000个样本，但是有10个类别，只挑了2个
-                    all_data.append(item)
-                    all_labels.append(label)
-                    
+            #for item,label in zip(data,labels):# 将两个数据绑在一起
+            #    if label in [0,1]: # 如果在0-1之间的话 50000个样本，但是有10个类别，只挑了2个
+            #        all_data.append(item)
+            #        all_labels.append(label)
         self._data = np.vstack(all_data) # 将最好的值合并，再转化为一个np的一个矩阵，data是item的一个矩阵，item就是np的中向量，使用vstack给纵向合并成一个矩阵
         """这里是直接将数据值拿过来直接用了，但是一般来说，针对图像来说，会习惯性的将图片缩放到-1到1之间，因此，这里做一个缩放"""
-        self._data = self._data / 127.5-1 # 这样数据集是0-255的，除过来是0-2之间的一个数，然后在减去1就是一个-1到1的一个数
+        #self._data = self._data / 127.5-1 # 这样数据集是0-255的，除过来是0-2之间的一个数，然后在减去1就是一个-1到1的一个数
         self._labels = np.hstack(all_labels)
         
         # 测试一下
-        print(self._data.shape) # 输出应该是50000张，但是只采用了10000张
+        print(self._data.shape) # 输出应该是50000张样本的数据集，test是10000个样本的数据集
         print(self._labels.shape)
         
         self._num_examples = self._data.shape[0]
@@ -90,46 +99,85 @@ test_filenames = [os.path.join(CIFAR_DIR, 'test_batch')]
 train_data = CifarData(train_filenames, True)
 test_data = CifarData(test_filenames, False)
 
-batch_data,batch_labels = train_data.next_batch(10) # next_batch大小，自己选
+# batch_data,batch_labels = train_data.next_batch(10) # next_batch大小，自己选
 # print(batch_data)
 # print(batch_labels) # 训练集，测试集郑只要1和0，确认cifar是可以正常工作的
 
 
-# In[76]:
+
+
+
+# In[ ]:
+
+
+
+
+
+# In[6]:
 
 
 tf.reset_default_graph()
 
 # 定义x和y的占位符来作为将要输入的神经网络变量 
 x = tf.placeholder(tf.float32,[None,3072]) 
-# [None]
+# [None]，eg:[0,5,6,3]
 y = tf.placeholder(tf.int64,[None]) # None样本数目是不确定的
-# (3072,1)
-w = tf.get_variable('w',[x.get_shape()[-1],1],
+# (3072,1)->(3072,10)
+# 多分类，所以10个类别 其实这里我们就用了10个神经元
+w = tf.get_variable('w',[x.get_shape()[-1],10],
                     initializer=tf.random_normal_initializer(0,1)) # 输出：1， initializer:如何初始化w-正态分布
-b = tf.get_variable('b',[1],
+# (10,)
+b = tf.get_variable('b',[10],
                     initializer=tf.constant_initializer(0.0)) # 偏置——维度和第二位是一样的，w的第二位输出是1位，所以b的第二位就是一维，b=0.0初始化为0
 
-# [None,3072] * [3072,1] = [None,1]    x*w的意思
+# [None,3072] * [3072,10] = [None,10]    x*w的意思
 y_ = tf.matmul(x,w) + b # 矩阵乘法+b；y_:每一个样值和w做内积 + b
-# [None,1]
-p_y_1 = tf.nn.sigmoid(y_)# y_变成一个概率值
+# 获取y之后，就使用softmax函数
+# 将10个指数分别分别求指数-归一化处理
 
-# [None,1]
-y_reshaped = tf.reshape(y,(-1,1)) # 先对y做一个reshape，
-print(type(y_reshaped))
-print(y_reshaped)
 
-y_reshaped_float = tf.cast(y_reshaped,tf.float32) # 因为x是32的，在tensorflow中对于类型是特别敏感的，所以要进行以下类型转化
-loss = tf.reduce_mean(tf.square(y_reshaped_float - p_y_1)) # 真实值和预测值差的平方，然后再去求均值，得到结果就是loss ; 平方差-计算损失函数，
+# mean square loss ：平方差损失函数
+"""
+# 之前文章中：1 + e^x
+# 实际用的api:e^x /sum(e^x)
+# [[0.01,0.02,,,,0.09],[]] 概率分布，10个值加起来等于1，
+p_y = tf.nn.softmax(y_) # softmax=tf.exp(logits) / tf.reduce_sum(tf.exp(logits),axis) :将每个值都求一个指数，然后将所有的指数都加起来作为分母，然后每个指数都分别去除以它 ---其实做了一个归一化
+
+# 5->[0,0,0,0,0,1,0,0,0,0]
+y_one_hot = tf.one_hot(y,10,dtype=tf.float32) # 将y变成一个分布，因为有10个类，需要把一个数变成长度为10的一个向量分布，类别类型是32，因为p_y是32
+
+# 接下来计算损失函数：让p_y和真是的y做损失函数
+# 根据上面的分布，可以计算它的距离了，计算距离的方法：交叉熵和平方差，在这里我们使用：平方差
+# 获取多类分布的损失函数
+loss = tf.reduce_mean(tf.square(y_one_hot - p_y)) # 真实值和预测值差的平方，然后再去求均值，得到结果就是loss ; 平方差-计算损失函数，
+
+"""
+# 补充-交叉熵损失函数
+# 交叉熵损失函数比平方差损失函数实现起来更简单一些 
+loss = tf.losses.sparse_softmax_cross_entropy(labels=y,logits=y_) # labels=y:图片真实的类别值；logits=y_：图片经过计算得到的内积值
+# y_ -> sofmax
+# y  -> one_hot
+# loss = ylogy_
+
+
+# 在y_下划线这个变量中，最大的值就是我要预测的类别值， 
+# 在y_是一个二维的矩阵，第一维度是它的样本，第二维度是每一个分布   
+# indices
+predict = tf.argmax(y_,1) 
+# 求正确的预测值，predict已经是一个预测值了，所以如下所示，就不需要在变化她的类型了
+correct_prediction = tf.equal(predict,y)# 预测正确的预测值
+accuracy = tf.reduce_mean(tf.cast(correct_prediction,tf.float64)) # 将correct_prdiction做均值
 
 
 # bool
+"""
 predict = p_y_1 > 0.5 # 大于0.5我就预测为True,小于0.5就是False
 correct_prediction = tf.equal(tf.cast(predict,tf.int64),y_reshaped)# 预测正确的预测值
 
 # 计算准确率-准确率是一个平均
 accuracy = tf.reduce_mean(tf.cast(correct_prediction,tf.float32)) # 先格式转换
+"""
+
 
 # 梯度下降的方法
 with tf.name_scope('train_op'):
@@ -137,7 +185,7 @@ with tf.name_scope('train_op'):
 # 以上计算图就完成了
 
 
-# In[86]:
+# In[8]:
 
 
 # 二分类逻辑斯蒂回归
@@ -175,19 +223,6 @@ with tf.Session() as sess: # 是一个会话的界面，执行这个计算图
                 all_test_acc_val.append(test_acc_val) # 将获取的test_acc_val添加到all_test_acc_val中
             test_acc = np.mean(all_test_acc_val) # 调用一个函数，做平均
             print('[Test ] Step: %d, acc: %4.5f' % (i+1,test_acc))
-             
-                
-"""
-1、以上的所有的代码就是：单个神经元的一个逻辑斯蒂回归模型，在二分类上的一个问题的一个解。
-2、tensorflow.Dataset可以更好进行数据处理
-
-"""
-
-
-# In[ ]:
-
-
-
 
 
 # In[ ]:
