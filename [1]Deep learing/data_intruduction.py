@@ -39,6 +39,9 @@ with open(os.path.join(CIFAR_DIR,"data_batch_1"),'rb') as f:
     
 
 
+
+
+
 # In[ ]:
 
 
