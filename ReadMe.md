@@ -8,7 +8,13 @@
 
 3、[3]NLP related algorithm learning
 
-分别记录各自的学习轨迹    
+分别记录各自的学习轨迹  
+
+更新：
+
+1、[1]Deep learing文件夹
+
+
 
 # 注
 
